@@ -1,199 +1,180 @@
 'use client'
-
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { FaHome, FaInfoCircle, FaUserFriends, FaUser, FaCoins, FaBookOpen } from 'react-icons/fa'
 
-export default function Home() {
-  const MAX_TASKS_PER_DAY = 10 // y: max tasks to perform per day
-  const DAILY_COIN_ALLOWANCE = 100000 // coins available to earn per day
-
+export default function EarnEasyRewards() {
   const [user, setUser] = useState({
-    availableCoins: DAILY_COIN_ALLOWANCE,
+    availableRewards: 0,
     performedTaskIds: [],
-    lastResetDate: new Date().toDateString()
+    lastActiveDate: '',
+    joinDate: '',
+    monthlyEarned: {},
+    cumulativeEarned: 0,
+    lifetimeTasksCompleted: 0
   })
-
-  const [activeTab, setActiveTab] = useState('home')
-  const [spentHistory, setSpentHistory] = useState([])
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    const today = new Date().toDateString()
-    const savedUser = localStorage.getItem('earnUser')
-    const savedSpent = localStorage.getItem('spentHistory')
-
+    setMounted(true)
+    const savedUser = localStorage.getItem('earnEasyUser')
     if (savedUser) {
-      const parsed = JSON.parse(savedUser)
-      if (parsed.lastResetDate!== today) {
-        setUser({
-          availableCoins: DAILY_COIN_ALLOWANCE,
-          performedTaskIds: [],
-          lastResetDate: today
-        })
-        setSpentHistory([])
-      } else {
-        setUser(parsed)
-        if (savedSpent) setSpentHistory(JSON.parse(savedSpent))
+      setUser(JSON.parse(savedUser))
+    } else {
+      const today = new Date().toDateString()
+      const newUser = {
+        availableRewards: 0,
+        performedTaskIds: [],
+        lastActiveDate: today,
+        joinDate: today,
+        monthlyEarned: {},
+        cumulativeEarned: 0,
+        lifetimeTasksCompleted: 0
       }
+      setUser(newUser)
+      localStorage.setItem('earnEasyUser', JSON.stringify(newUser))
     }
   }, [])
 
-  useEffect(() => {
-    localStorage.setItem('earnUser', JSON.stringify(user))
-  }, )
-
-  useEffect(() => {
-    localStorage.setItem('spentHistory', JSON.stringify(spentHistory))
-  }, [spentHistory])
-
   const tasks = [
-    { id: 1, name: 'Read Article 1', desc: '5 min read', link: '/content/article-1', cost: 20 },
-    { id: 2, name: 'Watch Video 1', desc: '30s video', link: '/content/video-1', cost: 35 },
-    { id: 3, name: 'Quick Survey', desc: '2 questions', link: '/content/survey-1', cost: 15 },
-    { id: 4, name: 'Read Article 2', desc: '3 min read', link: '/content/article-2', cost: 50 },
-    { id: 5, name: 'View Gallery', desc: '10 images', link: '/content/gallery-1', cost: 25 },
-    { id: 6, name: 'Watch Video 2', desc: '60s video', link: '/content/video-2', cost: 40 },
-    { id: 7, name: 'Read News', desc: '2 min read', link: '/content/news-1', cost: 30 },
-    { id: 8, name: 'Quick Poll', desc: '1 question', link: '/content/poll-1', cost: 20 },
-    { id: 9, name: 'Read Article 3', desc: '4 min read', link: '/content/article-3', cost: 45 },
-    { id: 10, name: 'View Tips', desc: '5 tips', link: '/content/tips-1', cost: 10 },
-    { id: 11, name: 'Watch Video 3', desc: '45s video', link: '/content/video-3', cost: 60 },
-    { id: 12, name: 'Read Guide', desc: '3 min read', link: '/content/guide-1', cost: 25 },
+    { id: 1, name: 'Task 1 - Read Article 1', desc: '5 min read', rewards: 5 },
+    { id: 2, name: 'Task 2 - Watch Video 1', desc: '30s video', rewards: 5 },
+    { id: 3, name: 'Task 3 - Read Article 2', desc: '3 min read', rewards: 5 },
+    { id: 4, name: 'Task 4 - Watch Video 2', desc: '60s video', rewards: 5 },
+    { id: 5, name: 'Task 5 - Take Survey 1', desc: '2 min survey', rewards: 5 },
+    { id: 6, name: 'Task 6 - View Tips', desc: '5 tips', rewards: 5 },
+    { id: 7, name: 'Task 7 - Share App', desc: 'Share with friend', rewards: 5 },
+    { id: 8, name: 'Task 8 - Daily Check-in', desc: 'Login bonus', rewards: 5 },
+    { id: 9, name: 'Task 9 - Watch Video 3', desc: '45s video', rewards: 5 },
+    { id: 10, name: 'Task 10 - Read Guide', desc: '3 min read', rewards: 5 },
+    { id: 11, name: 'Task 11 - Read Article 3', desc: '4 min read', rewards: 5 },
+    { id: 12, name: 'Task 12 - Watch Video 4', desc: '90s video', rewards: 5 },
+    { id: 13, name: 'Task 13 - Complete Quiz', desc: '5 questions', rewards: 5 },
+    { id: 14, name: 'Task 14 - Rate App', desc: 'Leave review', rewards: 5 },
+    { id: 15, name: 'Task 15 - Follow Social', desc: 'Follow us', rewards: 5 },
+    { id: 16, name: 'Task 16 - Watch Video 5', desc: '2 min video', rewards: 5 },
+    { id: 17, name: 'Task 17 - Read News', desc: '3 min read', rewards: 5 },
+    { id: 18, name: 'Task 18 - Take Survey 2', desc: '3 min survey', rewards: 5 },
+    { id: 19, name: 'Task 19 - Invite Friend', desc: 'Send invite', rewards: 5 },
+    { id: 20, name: 'Task 20 - Daily Bonus', desc: 'Claim bonus', rewards: 5 }
   ]
 
-  const totalCoinsSpent = spentHistory.reduce((sum, c) => sum + c, 0)
-  const balanceCoins = user.availableCoins - totalCoinsSpent
+  const MAX_TASKS_PER_DAY = 20
+  const MONTHLY_ELIGIBLE = 100000
+
+  useEffect(() => {
+    if (!mounted) return
+    const today = new Date().toDateString()
+    if (user.lastActiveDate && user.lastActiveDate!== today) {
+      const resetUser = {
+     ...user,
+        performedTaskIds: [],
+        lastActiveDate: today
+      }
+      setUser(resetUser)
+      localStorage.setItem('earnEasyUser', JSON.stringify(resetUser))
+    }
+  }, [mounted, user])
+
+  if (!mounted) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>
+  }
+
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  const rewardsEarnedToday = tasks
+.filter(task => user.performedTaskIds?.includes(task.id))
+.reduce((sum, task) => sum + task.rewards, 0)
+
+  const totalRewardsEarnedThisMonth = user.monthlyEarned?.[currentMonth] || 0
+  const cumulativeRewardsEarned = user.cumulativeEarned || 0
   const tasksPerformed = user.performedTaskIds.length
   const balanceTasks = MAX_TASKS_PER_DAY - tasksPerformed
 
-  const canPerformTask = (task) => {
-    const alreadyDone = user.performedTaskIds.includes(task.id)
-    const hasCoins = balanceCoins >= task.cost
-    const underLimit = balanceTasks > 0
-    return!alreadyDone && hasCoins && underLimit
-  }
+  const completeTask = (taskId, rewardAmount) => {
+    if (user.performedTaskIds.includes(taskId) || balanceTasks <= 0) return
 
-  const performTask = (task) => {
-    if (!canPerformTask(task)) {
-      if (user.performedTaskIds.includes(task.id)) {
-        alert('You already completed this task today!')
-      } else if (balanceTasks <= 0) {
-        alert('Daily task limit reached! Come back tomorrow.')
-      } else {
-        alert(`Not enough coins! Need ${task.cost} coins.`)
+    const updatedUser = {
+   ...user,
+      availableRewards: (user.availableRewards || 0) + rewardAmount,
+      performedTaskIds: [...user.performedTaskIds, taskId],
+      lifetimeTasksCompleted: (user.lifetimeTasksCompleted || 0) + 1,
+      cumulativeEarned: (user.cumulativeEarned || 0) + rewardAmount,
+      monthlyEarned: {
+     ...user.monthlyEarned,
+        [currentMonth]: (user.monthlyEarned?.[currentMonth] || 0) + rewardAmount
       }
-      return
     }
-
-    setUser(prev => ({
-...prev,
-      performedTaskIds: [...prev.performedTaskIds, task.id]
-    }))
-
-    setSpentHistory(prev => [...prev, task.cost])
-    window.open(task.link, '_blank')
+    setUser(updatedUser)
+    localStorage.setItem('earnEasyUser', JSON.stringify(updatedUser))
   }
-
-  const navItems = [
-    { key: 'home', label: 'Home', icon: <FaHome /> },
-    { key: 'about', label: 'About', icon: <FaInfoCircle /> },
-    { key: 'referral', label: 'Referral', icon: <FaUserFriends /> },
-    { key: 'profile', label: 'Profile', icon: <FaUser /> },
-  ]
-
-  const StatBox = ({ label, value, highlight = false }) => (
-    <div className={`bg-white p-2.5 sm:p-3 rounded-lg sm:rounded-xl shadow-sm ${highlight? 'ring-2 ring-emerald-500' : ''}`}>
-      <p className="text-[10px] sm:text-xs text-gray-500 mb-0.5 leading-tight">{label}</p>
-      <p className="text-base sm:text-lg font-bold leading-tight">{value.toLocaleString('en-US')}</p>
-    </div>
-  )
 
   return (
-    <main className="min-h-screen bg-gray-50 text-gray-900 pb-20">
-      <div className="bg-emerald-600 text-white px-3 sm:px-4 pt-4 sm:pt-6 pb-3 sm:pb-4 sticky top-0 z-10">
-        <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-          <FaCoins /> Earn Portal
-        </h1>
-        <p className="text-[11px] sm:text-xs opacity-90 mt-0.5">Complete content tasks to earn coins</p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-md mx-auto p-4 pb-20">
+        <h1 className="text-3xl font-bold text-center mb-6 text-blue-600">Earn Easy Rewards</h1>
 
-      {/* Stat boxes: 2 cols on all screens, tighter on mobile */}
-      <div className="px-3 sm:px-4 py-3 sm:py-4 grid grid-cols-2 gap-2 sm:gap-3">
-        <StatBox label="1. Coins Available to Earn" value={DAILY_COIN_ALLOWANCE} highlight />
-        <StatBox label="2. Avg Task Reward" value={Math.round(tasks.reduce((s,t) => s+t.cost, 0) / tasks.length)} />
-        <StatBox label="3. Coins Earned Today" value={totalCoinsSpent} />
-        <StatBox label="4. Balance Coins Available to Earn" value={balanceCoins} highlight />
-        <StatBox label="5. Max Tasks to Perform Per Day" value={MAX_TASKS_PER_DAY} />
-        <StatBox label="6. Tasks Completed" value={tasksPerformed} />
-        <StatBox label="7. Tasks Remaining" value={balanceTasks} highlight />
-        <StatBox label="8. Status" value={balanceTasks > 0? 'Active' : 'Limit Reached'} />
-      </div>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="bg-white p-3 rounded-xl shadow-sm">
+            <p className="text-xs text-gray-500 mb-1">Eligible/Month</p>
+            <p className="text-xl font-bold text-blue-600">{MONTHLY_ELIGIBLE}</p>
+          </div>
+          <div className="bg-white p-3 rounded-xl shadow-sm">
+            <p className="text-xs text-gray-500 mb-1">Earned Today</p>
+            <p className="text-xl font-bold text-green-600">{rewardsEarnedToday}</p>
+          </div>
+          <div className="bg-white p-3 rounded-xl shadow-sm">
+            <p className="text-xs text-gray-500 mb-1">This Month</p>
+            <p className="text-xl font-bold">{totalRewardsEarnedThisMonth}</p>
+          </div>
+          <div className="bg-white p-3 rounded-xl shadow-sm">
+            <p className="text-xs text-gray-500 mb-1">Total Since Join</p>
+            <p className="text-xl font-bold">{cumulativeRewardsEarned}</p>
+          </div>
+        </div>
 
-      <div className="px-3 sm:px-4">
-        <h2 className="text-base sm:text-lg font-bold mb-1">Available Tasks</h2>
-        <p className="text-[11px] sm:text-xs text-gray-500 mb-2 sm:mb-3">Complete tasks once per day. Resets at midnight.</p>
-        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="bg-blue-50 p-3 rounded-xl mb-4 text-center">
+          <p className="text-sm text-gray-600">
+            Tasks Today: <span className="font-bold">{tasksPerformed}/{MAX_TASKS_PER_DAY}</span>
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Lifetime Tasks: {user.lifetimeTasksCompleted}
+          </p>
+        </div>
+
+        <h2 className="text-lg font-bold mb-3">Today's Tasks</h2>
+        <div className="grid grid-cols-2 gap-3">
           {tasks.map(task => {
             const isDone = user.performedTaskIds.includes(task.id)
-            const canDo = canPerformTask(task)
+            const canDo =!isDone && balanceTasks > 0
 
             return (
-              <motion.button
-                key={task.id}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => performTask(task)}
-                disabled={!canDo}
-                className={`p-2.5 sm:p-3 rounded-lg sm:rounded-xl font-semibold transition relative text-left min-h-[72px] sm:min-h-[80px] ${
-                  isDone
-           ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                    : canDo
-             ? 'bg-emerald-500 hover:bg-emerald-600 active:bg-emerald-700 text-white shadow-md'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {isDone && <span className="absolute top-1 right-1.5 text-[10px]">✓</span>}
-                <div className="flex items-start gap-1.5 sm:gap-2">
-                  <FaBookOpen className="mt-0.5 flex-shrink-0 text-sm sm:text-base" />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs sm:text-sm leading-tight font-semibold">{task.name}</div>
-                    <div className="text-[10px] sm:text-xs opacity-80 mt-0.5 leading-tight">{task.desc}</div>
-                    <div className="text-[11px] sm:text-xs mt-1 flex items-center gap-1 font-bold">
-                      <FaCoins className="text-yellow-300 flex-shrink-0" /> {task.cost}
-                    </div>
-                  </div>
+              <div key={task.id} className={`bg-white p-3 rounded-xl shadow-sm ${isDone? 'opacity-60' : ''}`}>
+                <div className="mb-2">
+                  <h3 className="font-semibold text-sm leading-tight mb-1">{task.name}</h3>
+                  <p className="text-xs text-gray-500">{task.desc}</p>
                 </div>
-              </motion.button>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-green-600 font-bold text-sm">+{task.rewards} Rewards</span>
+                </div>
+
+                {isDone? (
+                  <button disabled className="w-full bg-gray-300 text-gray-500 py-2 rounded-lg text-xs font-bold">
+                    Done Today
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => completeTask(task.id, task.rewards)}
+                    disabled={!canDo}
+                    className={`w-full py-2 rounded-lg text-xs font-bold ${
+                      canDo? 'bg-blue-600 text-white active:bg-blue-700' : 'bg-gray-300 text-gray-500'
+                    }`}
+                  >
+                    Complete
+                  </button>
+                )}
+              </div>
             )
           })}
         </div>
       </div>
-
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-inset-bottom">
-        <div className="flex justify-around py-1.5 sm:py-2">
-          {navItems.map(item => (
-            <button
-              key={item.key}
-              onClick={() => setActiveTab(item.key)}
-              className={`flex flex-col items-center gap-0.5 px-3 sm:px-4 py-1 min-w-[64px] ${
-                activeTab === item.key? 'text-emerald-600' : 'text-gray-500'
-              }`}
-            >
-              <div className="text-lg sm:text-xl">{item.icon}</div>
-              <span className="text-[10px] sm:text-xs font-medium">{item.label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {activeTab!== 'home' && (
-        <div className="fixed inset-0 bg-white z-10 pt-16 sm:pt-20 flex items-center justify-center">
-          <div className="text-center text-gray-500 px-4">
-            <p className="text-xl sm:text-2xl font-bold mb-2">{navItems.find(i => i.key === activeTab)?.label}</p>
-            <p className="text-sm">Coming in Day 18</p>
-            <button onClick={() => setActiveTab('home')} className="mt-4 text-emerald-500 text-sm font-semibold">Back to Home</button>
-          </div>
-        </div>
-      )}
-    </main>
+    </div>
   )
 }
