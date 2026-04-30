@@ -1,5 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { FaHome, FaInfoCircle, FaUserFriends, FaUser, FaCoins, FaBook, FaVideo, FaLink, FaCheck, FaArrowLeft, FaShare, FaTimes, FaSun, FaMoon } from 'react-icons/fa'
 
 export default function EarnEasyRewards() {
   const [user, setUser] = useState({
@@ -12,10 +14,13 @@ export default function EarnEasyRewards() {
     lifetimeTasksCompleted: 0
   })
   const [mounted, setMounted] = useState(false)
+  const [darkMode, setDarkMode] = useState(false)
 
   useEffect(() => {
     setMounted(true)
     const savedUser = localStorage.getItem('earnEasyUser')
+    const savedTheme = localStorage.getItem('earnEasyTheme')
+
     if (savedUser) {
       setUser(JSON.parse(savedUser))
     } else {
@@ -32,7 +37,17 @@ export default function EarnEasyRewards() {
       setUser(newUser)
       localStorage.setItem('earnEasyUser', JSON.stringify(newUser))
     }
+
+    if (savedTheme === 'dark') {
+      setDarkMode(true)
+    }
   }, [])
+
+  useEffect(() => {
+    if (mounted) {
+      localStorage.setItem('earnEasyTheme', darkMode? 'dark' : 'light')
+    }
+  }, [darkMode, mounted])
 
   const tasks = [
     { id: 1, name: 'Task 1 - Read Article 1', desc: '5 min read', rewards: 5 },
@@ -75,7 +90,9 @@ export default function EarnEasyRewards() {
   }, [mounted, user])
 
   if (!mounted) {
-    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading...</div>
+    return <div className={`min-h-screen ${darkMode? 'bg-gray-950' : 'bg-gray-50'} flex items-center justify-center`}>
+      <p className={darkMode? 'text-gray-200' : 'text-gray-900'}>Loading...</p>
+    </div>
   }
 
   const currentMonth = new Date().toISOString().slice(0, 7)
@@ -106,57 +123,77 @@ export default function EarnEasyRewards() {
     localStorage.setItem('earnEasyUser', JSON.stringify(updatedUser))
   }
 
+  const toggleTheme = () => setDarkMode(!darkMode)
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${darkMode? 'bg-gray-950' : 'bg-gray-50'}`}>
       <div className="max-w-md mx-auto p-4 pb-20">
-        <h1 className="text-3xl font-bold text-center mb-6 text-blue-600">Earn Easy Rewards</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className={`text-3xl font-bold ${darkMode? 'text-blue-400' : 'text-blue-600'}`}>
+            Earn Easy Rewards
+          </h1>
+          <button
+            onClick={toggleTheme}
+            className={`p-2 rounded-full ${darkMode? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+          >
+            {darkMode? <FaSun size={20} /> : <FaMoon size={20} />}
+          </button>
+        </div>
 
         <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-white p-3 rounded-xl shadow-sm">
-            <p className="text-xs text-gray-500 mb-1">Eligible/Month</p>
-            <p className="text-xl font-bold text-blue-600">{MONTHLY_ELIGIBLE}</p>
+          <div className={`${darkMode? 'bg-gray-900 border border-gray-600' : 'bg-white'} p-3 rounded-xl shadow-sm`}>
+            <span className={`inline-block text-xs font-medium px-2 py-1 rounded-md mb-2 ${darkMode? 'bg-blue-900/50 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+              Eligible/Month
+            </span>
+            <p className={`text-xl font-bold ${darkMode? 'text-blue-400' : 'text-blue-600'}`}>{MONTHLY_ELIGIBLE}</p>
           </div>
-          <div className="bg-white p-3 rounded-xl shadow-sm">
-            <p className="text-xs text-gray-500 mb-1">Earned Today</p>
-            <p className="text-xl font-bold text-green-600">{rewardsEarnedToday}</p>
+          <div className={`${darkMode? 'bg-gray-900 border border-gray-600' : 'bg-white'} p-3 rounded-xl shadow-sm`}>
+            <span className={`inline-block text-xs font-medium px-2 py-1 rounded-md mb-2 ${darkMode? 'bg-green-900/50 text-green-300' : 'bg-green-100 text-green-700'}`}>
+              Earned Today
+            </span>
+            <p className="text-xl font-bold text-green-400">{rewardsEarnedToday}</p>
           </div>
-          <div className="bg-white p-3 rounded-xl shadow-sm">
-            <p className="text-xs text-gray-500 mb-1">This Month</p>
-            <p className="text-xl font-bold">{totalRewardsEarnedThisMonth}</p>
+          <div className={`${darkMode? 'bg-gray-900 border border-gray-600' : 'bg-white'} p-3 rounded-xl shadow-sm`}>
+            <span className={`inline-block text-xs font-medium px-2 py-1 rounded-md mb-2 ${darkMode? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
+              This Month
+            </span>
+            <p className={`text-xl font-bold ${darkMode? 'text-gray-100' : 'text-gray-900'}`}>{totalRewardsEarnedThisMonth}</p>
           </div>
-          <div className="bg-white p-3 rounded-xl shadow-sm">
-            <p className="text-xs text-gray-500 mb-1">Total Since Join</p>
-            <p className="text-xl font-bold">{cumulativeRewardsEarned}</p>
+          <div className={`${darkMode? 'bg-gray-900 border border-gray-600' : 'bg-white'} p-3 rounded-xl shadow-sm`}>
+            <span className={`inline-block text-xs font-medium px-2 py-1 rounded-md mb-2 ${darkMode? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
+              Total Since Join
+            </span>
+            <p className={`text-xl font-bold ${darkMode? 'text-gray-100' : 'text-gray-900'}`}>{cumulativeRewardsEarned}</p>
           </div>
         </div>
 
-        <div className="bg-blue-50 p-3 rounded-xl mb-4 text-center">
-          <p className="text-sm text-gray-600">
+        <div className={`${darkMode? 'bg-blue-900/40 border border-blue-700' : 'bg-blue-50'} p-3 rounded-xl mb-4 text-center`}>
+          <p className={`text-sm ${darkMode? 'text-gray-200' : 'text-gray-600'}`}>
             Tasks Today: <span className="font-bold">{tasksPerformed}/{MAX_TASKS_PER_DAY}</span>
           </p>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className={`text-xs ${darkMode? 'text-gray-200' : 'text-gray-500'} mt-1`}>
             Lifetime Tasks: {user.lifetimeTasksCompleted}
           </p>
         </div>
 
-        <h2 className="text-lg font-bold mb-3">Today's Tasks</h2>
+        <h2 className={`text-lg font-bold mb-3 ${darkMode? 'text-gray-100' : 'text-gray-900'}`}>Today's Tasks</h2>
         <div className="grid grid-cols-2 gap-3">
           {tasks.map(task => {
             const isDone = user.performedTaskIds.includes(task.id)
             const canDo =!isDone && balanceTasks > 0
 
             return (
-              <div key={task.id} className={`bg-white p-3 rounded-xl shadow-sm ${isDone? 'opacity-60' : ''}`}>
+              <div key={task.id} className={`${darkMode? 'bg-gray-900 border border-gray-600' : 'bg-white'} p-3 rounded-xl shadow-sm ${isDone? 'opacity-70' : ''}`}>
                 <div className="mb-2">
-                  <h3 className="font-semibold text-sm leading-tight mb-1">{task.name}</h3>
-                  <p className="text-xs text-gray-500">{task.desc}</p>
+                  <h3 className={`font-semibold text-sm leading-tight mb-1 ${darkMode? 'text-gray-50' : 'text-gray-900'}`}>{task.name}</h3>
+                  <p className={`text-xs ${darkMode? 'text-gray-200' : 'text-gray-500'}`}>{task.desc}</p>
                 </div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-green-600 font-bold text-sm">+{task.rewards} Rewards</span>
+                  <span className="text-green-400 font-bold text-sm">+{task.rewards} Rewards</span>
                 </div>
 
                 {isDone? (
-                  <button disabled className="w-full bg-gray-300 text-gray-500 py-2 rounded-lg text-xs font-bold">
+                  <button disabled className={`w-full ${darkMode? 'bg-gray-700 text-gray-300' : 'bg-gray-300 text-gray-500'} py-2 rounded-lg text-xs font-bold`}>
                     Done Today
                   </button>
                 ) : (
@@ -164,7 +201,7 @@ export default function EarnEasyRewards() {
                     onClick={() => completeTask(task.id, task.rewards)}
                     disabled={!canDo}
                     className={`w-full py-2 rounded-lg text-xs font-bold ${
-                      canDo? 'bg-blue-600 text-white active:bg-blue-700' : 'bg-gray-300 text-gray-500'
+                      canDo? 'bg-blue-600 text-white active:bg-blue-700' : darkMode? 'bg-gray-700 text-gray-300' : 'bg-gray-300 text-gray-500'
                     }`}
                   >
                     Complete
