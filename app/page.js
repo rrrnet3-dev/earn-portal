@@ -1,13 +1,39 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { FaHome, FaInfoCircle, FaUserFriends, FaUser, FaCoins, FaBook, FaVideo, FaLink, FaCheck, FaArrowLeft, FaShare, FaTimes, FaSun, FaMoon, FaUserGraduate, FaChalkboardTeacher, FaUserCheck, FaUserTie, FaBullhorn, FaAward, FaUsers, FaUserShield, FaUserNinja, FaMedal, FaTrophy, FaSitemap, FaChessRook, FaChessKnight, FaDraftingCompass, FaEye, FaLandmark, FaStar, FaCrown } from 'react-icons/fa'
+import { FaSun, FaMoon, FaUserGraduate, FaChalkboardTeacher, FaUserCheck, FaUser, FaUserTie, FaBullhorn, FaAward, FaUsers, FaUserShield, FaUserNinja, FaMedal, FaTrophy, FaSitemap, FaChessRook, FaChessKnight, FaDraftingCompass, FaEye, FaLandmark, FaStar, FaCrown, FaTimes } from 'react-icons/fa'
 import React from 'react'
+
+const TASK_COOLDOWN_HOURS = 2
+const COOLDOWN_MS = TASK_COOLDOWN_HOURS * 60 * 60 * 1000
+
+function CooldownTimer({ taskId, darkMode, getCooldownRemaining }) {
+  const [remaining, setRemaining] = useState(getCooldownRemaining(taskId))
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRemaining(getCooldownRemaining(taskId))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [taskId, getCooldownRemaining])
+
+  if (remaining <= 0) return null
+
+  const hours = Math.floor(remaining / 3600000)
+  const minutes = Math.floor((remaining % 3600000) / 60000)
+  const seconds = Math.floor((remaining % 60000) / 1000)
+
+  return (
+    <div className={`text-xs ${darkMode? 'text-orange-400' : 'text-orange-600'} font-semibold mb-2`}>
+      Cooldown: {hours}h {minutes}m {seconds}s
+    </div>
+  )
+}
 
 export default function EarnEasyRewards() {
   const [user, setUser] = useState({
     availableRewards: 0,
-    performedTaskIds: [],
+    taskCompletionTimes: {},
     lastActiveDate: '',
     joinDate: '',
     monthlyEarned: {},
@@ -20,7 +46,6 @@ export default function EarnEasyRewards() {
   const [showLevelPopup, setShowLevelPopup] = useState(false)
   const [levelPopupData, setLevelPopupData] = useState({ level: 0, name: '', nextName: '', nextTasks: 0 })
 
-  // 21-Level Designation System
   const LEVELS = [
     { level: 1, name: 'Intern', icon: FaUserGraduate },
     { level: 2, name: 'Trainee', icon: FaChalkboardTeacher },
@@ -57,43 +82,82 @@ export default function EarnEasyRewards() {
     return 1
   }
 
-  useEffect(() => {
-    setMounted(true)
-    const savedUser = localStorage.getItem('earnEasyUser')
-    const savedTheme = localStorage.getItem('earnEasyTheme')
+  const isTaskAvailable = (taskId) => {
+    const completedAt = user.taskCompletionTimes?.[taskId]
+    if (!completedAt) return true
+    const elapsed = Date.now() - new Date(completedAt).getTime()
+    return elapsed >= COOLDOWN_MS
+  }
 
-    if (savedUser) {
-      const parsed = JSON.parse(savedUser)
-      setUser({
-       ...parsed,
-        lifetimeTasksCompleted: parsed.lifetimeTasksCompleted || 0,
-        highestLevelReached: parsed.highestLevelReached || 1
+  const getTaskCooldownRemaining = (taskId) => {
+    const completedAt = user.taskCompletionTimes?.[taskId]
+    if (!completedAt) return 0
+    const elapsed = Date.now() - new Date(completedAt).getTime()
+    return Math.max(0, COOLDOWN_MS - elapsed)
+  }
+
+  useEffect(() => {
+  setMounted(true)
+  const savedUser = localStorage.getItem('earnEasyUser')
+  const savedTheme = localStorage.getItem('earnEasyTheme')
+
+  if (savedUser) {
+    const parsed = JSON.parse(savedUser)
+    if (parsed.performedTaskIds &&!parsed.taskCompletionTimes) {
+      const migrated = {}
+      const yesterday = new Date(Date.now() - COOLDOWN_MS).toISOString()
+      parsed.performedTaskIds.forEach(id => { migrated[id] = yesterday })
+      parsed.taskCompletionTimes = migrated
+      delete parsed.performedTaskIds
+    }
+
+    // Check for level up on page load
+    const currentLevel = getLevel(parsed.lifetimeTasksCompleted || 0)
+    const oldHighest = parsed.highestLevelReached || 1
+
+    if (currentLevel > oldHighest) {
+      const newLevelData = getLevelData(currentLevel)
+      const nextLevelData = getLevelData(currentLevel + 1)
+      setLevelPopupData({
+        level: currentLevel,
+        name: newLevelData.name,
+        nextName: nextLevelData.name,
+        nextTasks: getTasksForNextLevel(currentLevel)
       })
-    } else {
-      const today = new Date().toDateString()
-      const newUser = {
-        availableRewards: 0,
-        performedTaskIds: [],
-        lastActiveDate: today,
-        joinDate: today,
-        monthlyEarned: {},
-        cumulativeEarned: 0,
-        lifetimeTasksCompleted: 0,
-        highestLevelReached: 1
-      }
-      setUser(newUser)
-      localStorage.setItem('earnEasyUser', JSON.stringify(newUser))
+      setShowLevelPopup(true)
+      setTimeout(() => setShowLevelPopup(false), 3000)
+
+      parsed.highestLevelReached = currentLevel
+      localStorage.setItem('earnEasyUser', JSON.stringify(parsed))
     }
 
-    if (savedTheme === 'dark') {
-      setDarkMode(true)
+    setUser({
+ ...parsed,
+      taskCompletionTimes: parsed.taskCompletionTimes || {},
+      lifetimeTasksCompleted: parsed.lifetimeTasksCompleted || 0,
+      highestLevelReached: parsed.highestLevelReached || 1
+    })
+  } else {
+    const today = new Date().toDateString()
+    const newUser = {
+      availableRewards: 0,
+      taskCompletionTimes: {},
+      lastActiveDate: today,
+      joinDate: today,
+      monthlyEarned: {},
+      cumulativeEarned: 0,
+      lifetimeTasksCompleted: 0,
+      highestLevelReached: 1
     }
-  }, [])
+    setUser(newUser)
+    localStorage.setItem('earnEasyUser', JSON.stringify(newUser))
+  }
+
+  if (savedTheme === 'dark') setDarkMode(true)
+}, []) // <-- Make sure there's nothing after this line except a newline
 
   useEffect(() => {
-    if (mounted) {
-      localStorage.setItem('earnEasyTheme', darkMode? 'dark' : 'light')
-    }
+    if (mounted) localStorage.setItem('earnEasyTheme', darkMode? 'dark' : 'light')
   }, [darkMode, mounted])
 
   const tasks = [
@@ -119,7 +183,6 @@ export default function EarnEasyRewards() {
     { id: 20, name: 'Task 20 - Daily Bonus', desc: 'Claim bonus', rewards: 5 }
   ]
 
-  const MAX_TASKS_PER_DAY = 20
   const MONTHLY_ELIGIBLE = 100000
 
   useEffect(() => {
@@ -127,8 +190,8 @@ export default function EarnEasyRewards() {
     const today = new Date().toDateString()
     if (user.lastActiveDate && user.lastActiveDate!== today) {
       const resetUser = {
-       ...user,
-        performedTaskIds: [],
+    ...user,
+        taskCompletionTimes: {},
         lastActiveDate: today
       }
       setUser(resetUser)
@@ -143,56 +206,12 @@ export default function EarnEasyRewards() {
   }
 
   const currentMonth = new Date().toISOString().slice(0, 7)
-  const rewardsEarnedToday = tasks
-   .filter(task => user.performedTaskIds?.includes(task.id))
-   .reduce((sum, task) => sum + task.rewards, 0)
-
+  const tasksAvailableNow = tasks.filter(task => isTaskAvailable(task.id)).length
   const totalRewardsEarnedThisMonth = user.monthlyEarned?.[currentMonth] || 0
   const cumulativeRewardsEarned = user.cumulativeEarned || 0
-  const tasksPerformed = user.performedTaskIds.length
-  const balanceTasks = MAX_TASKS_PER_DAY - tasksPerformed
   const currentLevel = getLevel(user.lifetimeTasksCompleted)
   const currentLevelData = getLevelData(currentLevel)
-  const nextLevelData = getLevelData(currentLevel + 1)
-  const nextLevelTasks = getTasksForNextLevel(currentLevel)
   const CurrentIcon = currentLevelData.icon
-
-  const completeTask = (taskId, rewardAmount) => {
-    if (user.performedTaskIds.includes(taskId) || balanceTasks <= 0) return
-
-    const newLifetimeTotal = (user.lifetimeTasksCompleted || 0) + 1
-    const newLevel = getLevel(newLifetimeTotal)
-    const prevLevel = getLevel(user.lifetimeTasksCompleted || 0)
-
-    const updatedUser = {
-     ...user,
-      availableRewards: (user.availableRewards || 0) + rewardAmount,
-      performedTaskIds: [...user.performedTaskIds, taskId],
-      lifetimeTasksCompleted: newLifetimeTotal,
-      cumulativeEarned: (user.cumulativeEarned || 0) + rewardAmount,
-      monthlyEarned: {
-       ...user.monthlyEarned,
-        [currentMonth]: (user.monthlyEarned?.[currentMonth] || 0) + rewardAmount
-      },
-      highestLevelReached: Math.max(user.highestLevelReached || 1, newLevel)
-    }
-
-    setUser(updatedUser)
-    localStorage.setItem('earnEasyUser', JSON.stringify(updatedUser))
-
-    if (newLevel > prevLevel && newLevel > (user.highestLevelReached || 1)) {
-      const newLevelData = getLevelData(newLevel)
-      const nextData = getLevelData(newLevel + 1)
-      setLevelPopupData({
-        level: newLevel,
-        name: newLevelData.name,
-        nextName: nextData.name,
-        nextTasks: getTasksForNextLevel(newLevel)
-      })
-      setShowLevelPopup(true)
-      setTimeout(() => setShowLevelPopup(false), 4000)
-    }
-  }
 
   const toggleTheme = () => setDarkMode(!darkMode)
 
@@ -259,9 +278,9 @@ export default function EarnEasyRewards() {
           </div>
           <div className={`${darkMode? 'bg-gray-900 border border-gray-600' : 'bg-white'} p-3 rounded-xl shadow-sm`}>
             <span className={`inline-block text-xs font-medium px-2 py-1 rounded-md mb-2 ${darkMode? 'bg-green-900/50 text-green-300' : 'bg-green-100 text-green-700'}`}>
-              Earned Today
+              Available Now
             </span>
-            <p className="text-xl font-bold text-green-400">{rewardsEarnedToday}</p>
+            <p className="text-xl font-bold text-green-400">{tasksAvailableNow}/20</p>
           </div>
           <div className={`${darkMode? 'bg-gray-900 border border-gray-600' : 'bg-white'} p-3 rounded-xl shadow-sm`}>
             <span className={`inline-block text-xs font-medium px-2 py-1 rounded-md mb-2 ${darkMode? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-700'}`}>
@@ -279,21 +298,20 @@ export default function EarnEasyRewards() {
 
         <div className={`${darkMode? 'bg-blue-900/40 border border-blue-700' : 'bg-blue-50'} p-3 rounded-xl mb-4 text-center`}>
           <p className={`text-sm ${darkMode? 'text-gray-200' : 'text-gray-600'}`}>
-            Tasks Today: <span className="font-bold">{tasksPerformed}/{MAX_TASKS_PER_DAY}</span>
+            Tasks reset every 2 hours | Daily reset at midnight
           </p>
           <p className={`text-xs ${darkMode? 'text-gray-200' : 'text-gray-500'} mt-1`}>
             Lifetime: {user.lifetimeTasksCompleted} | Rank: {currentLevelData.name}
           </p>
         </div>
 
-        <h2 className={`text-lg font-bold mb-3 ${darkMode? 'text-gray-100' : 'text-gray-900'}`}>Today's Tasks</h2>
+        <h2 className={`text-lg font-bold mb-3 ${darkMode? 'text-gray-100' : 'text-gray-900'}`}>Tasks</h2>
         <div className="grid grid-cols-2 gap-3">
           {tasks.map(task => {
-            const isDone = user.performedTaskIds.includes(task.id)
-            const canDo =!isDone && balanceTasks > 0
+            const isAvailable = isTaskAvailable(task.id)
 
             return (
-              <div key={task.id} className={`${darkMode? 'bg-gray-900 border border-gray-600' : 'bg-white'} p-3 rounded-xl shadow-sm ${isDone? 'opacity-70' : ''}`}>
+              <div key={task.id} className={`${darkMode? 'bg-gray-900 border border-gray-600' : 'bg-white'} p-3 rounded-xl shadow-sm ${!isAvailable? 'opacity-70' : ''}`}>
                 <div className="mb-2">
                   <h3 className={`font-semibold text-sm leading-tight mb-1 ${darkMode? 'text-gray-50' : 'text-gray-900'}`}>{task.name}</h3>
                   <p className={`text-xs ${darkMode? 'text-gray-200' : 'text-gray-500'}`}>{task.desc}</p>
@@ -302,19 +320,18 @@ export default function EarnEasyRewards() {
                   <span className="text-green-400 font-bold text-sm">+{task.rewards} Rewards</span>
                 </div>
 
-                {isDone? (
-                  <button disabled className={`w-full ${darkMode? 'bg-gray-700 text-gray-300' : 'bg-gray-300 text-gray-500'} py-2 rounded-lg text-xs font-bold`}>
-                    Done Today
+                {!isAvailable && <CooldownTimer taskId={task.id} darkMode={darkMode} getCooldownRemaining={getTaskCooldownRemaining} />}
+
+                {isAvailable? (
+                  <button
+                    onClick={() => window.location.href = `/task/${task.id}`}
+                    className="w-full py-2 rounded-lg text-xs font-bold bg-blue-600 text-white active:bg-blue-700"
+                  >
+                    Start Task
                   </button>
                 ) : (
-                  <button
-                    onClick={() => completeTask(task.id, task.rewards)}
-                    disabled={!canDo}
-                    className={`w-full py-2 rounded-lg text-xs font-bold ${
-                      canDo? 'bg-blue-600 text-white active:bg-blue-700' : darkMode? 'bg-gray-700 text-gray-300' : 'bg-gray-300 text-gray-500'
-                    }`}
-                  >
-                    Complete
+                  <button disabled className={`w-full ${darkMode? 'bg-gray-700 text-gray-300' : 'bg-gray-300 text-gray-500'} py-2 rounded-lg text-xs font-bold`}>
+                    Cooldown Active
                   </button>
                 )}
               </div>
