@@ -1,7 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { FaHome, FaInfoCircle, FaUserFriends, FaUser, FaCoins, FaBook, FaVideo, FaLink, FaCheck, FaArrowLeft, FaShare, FaTimes, FaSun, FaMoon } from 'react-icons/fa'
+import { motion, AnimatePresence } from 'framer-motion'
+import { FaHome, FaInfoCircle, FaUserFriends, FaUser, FaCoins, FaBook, FaVideo, FaLink, FaCheck, FaArrowLeft, FaShare, FaTimes, FaSun, FaMoon, FaUserGraduate, FaChalkboardTeacher, FaUserCheck, FaUserTie, FaBullhorn, FaAward, FaUsers, FaUserShield, FaUserNinja, FaMedal, FaTrophy, FaSitemap, FaChessRook, FaChessKnight, FaDraftingCompass, FaEye, FaLandmark, FaStar, FaCrown } from 'react-icons/fa'
+import React from 'react'
 
 export default function EarnEasyRewards() {
   const [user, setUser] = useState({
@@ -11,10 +12,50 @@ export default function EarnEasyRewards() {
     joinDate: '',
     monthlyEarned: {},
     cumulativeEarned: 0,
-    lifetimeTasksCompleted: 0
+    lifetimeTasksCompleted: 0,
+    highestLevelReached: 0
   })
   const [mounted, setMounted] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
+  const [showLevelPopup, setShowLevelPopup] = useState(false)
+  const [levelPopupData, setLevelPopupData] = useState({ level: 0, name: '', nextName: '', nextTasks: 0 })
+
+  // 21-Level Designation System
+  const LEVELS = [
+    { level: 1, name: 'Intern', icon: FaUserGraduate },
+    { level: 2, name: 'Trainee', icon: FaChalkboardTeacher },
+    { level: 3, name: 'Senior Trainee', icon: FaUserCheck },
+    { level: 4, name: 'Associate', icon: FaUser },
+    { level: 5, name: 'Senior Associate', icon: FaUserTie },
+    { level: 6, name: 'Ambassador', icon: FaBullhorn },
+    { level: 7, name: 'Senior Ambassador', icon: FaAward },
+    { level: 8, name: 'Manager', icon: FaUsers },
+    { level: 9, name: 'Senior Manager', icon: FaUserShield },
+    { level: 10, name: 'Trainer', icon: FaUserNinja },
+    { level: 11, name: 'Master', icon: FaMedal },
+    { level: 12, name: 'Grand Master', icon: FaTrophy },
+    { level: 13, name: 'Organiser', icon: FaSitemap },
+    { level: 14, name: 'Chief Organiser', icon: FaChessRook },
+    { level: 15, name: 'Strategist', icon: FaChessKnight },
+    { level: 16, name: 'Architect', icon: FaDraftingCompass },
+    { level: 17, name: 'Visionary', icon: FaEye },
+    { level: 18, name: 'Director', icon: FaLandmark },
+    { level: 19, name: 'Star Director', icon: FaStar },
+    { level: 20, name: 'Legendary Director', icon: FaCrown },
+    { level: 21, name: 'Legendary Star', icon: FaSun }
+  ]
+
+  const getLevel = (tasksCompleted) => {
+    const level = Math.min(Math.floor(tasksCompleted) + 1, 21)
+    return level
+  }
+
+  const getLevelData = (level) => LEVELS[level - 1] || LEVELS[0]
+
+  const getTasksForNextLevel = (currentLevel) => {
+    if (currentLevel >= 21) return 0
+    return 1
+  }
 
   useEffect(() => {
     setMounted(true)
@@ -22,7 +63,12 @@ export default function EarnEasyRewards() {
     const savedTheme = localStorage.getItem('earnEasyTheme')
 
     if (savedUser) {
-      setUser(JSON.parse(savedUser))
+      const parsed = JSON.parse(savedUser)
+      setUser({
+       ...parsed,
+        lifetimeTasksCompleted: parsed.lifetimeTasksCompleted || 0,
+        highestLevelReached: parsed.highestLevelReached || 1
+      })
     } else {
       const today = new Date().toDateString()
       const newUser = {
@@ -32,7 +78,8 @@ export default function EarnEasyRewards() {
         joinDate: today,
         monthlyEarned: {},
         cumulativeEarned: 0,
-        lifetimeTasksCompleted: 0
+        lifetimeTasksCompleted: 0,
+        highestLevelReached: 1
       }
       setUser(newUser)
       localStorage.setItem('earnEasyUser', JSON.stringify(newUser))
@@ -80,7 +127,7 @@ export default function EarnEasyRewards() {
     const today = new Date().toDateString()
     if (user.lastActiveDate && user.lastActiveDate!== today) {
       const resetUser = {
-     ...user,
+       ...user,
         performedTaskIds: [],
         lastActiveDate: today
       }
@@ -97,41 +144,104 @@ export default function EarnEasyRewards() {
 
   const currentMonth = new Date().toISOString().slice(0, 7)
   const rewardsEarnedToday = tasks
-.filter(task => user.performedTaskIds?.includes(task.id))
-.reduce((sum, task) => sum + task.rewards, 0)
+   .filter(task => user.performedTaskIds?.includes(task.id))
+   .reduce((sum, task) => sum + task.rewards, 0)
 
   const totalRewardsEarnedThisMonth = user.monthlyEarned?.[currentMonth] || 0
   const cumulativeRewardsEarned = user.cumulativeEarned || 0
   const tasksPerformed = user.performedTaskIds.length
   const balanceTasks = MAX_TASKS_PER_DAY - tasksPerformed
+  const currentLevel = getLevel(user.lifetimeTasksCompleted)
+  const currentLevelData = getLevelData(currentLevel)
+  const nextLevelData = getLevelData(currentLevel + 1)
+  const nextLevelTasks = getTasksForNextLevel(currentLevel)
+  const CurrentIcon = currentLevelData.icon
 
   const completeTask = (taskId, rewardAmount) => {
     if (user.performedTaskIds.includes(taskId) || balanceTasks <= 0) return
 
+    const newLifetimeTotal = (user.lifetimeTasksCompleted || 0) + 1
+    const newLevel = getLevel(newLifetimeTotal)
+    const prevLevel = getLevel(user.lifetimeTasksCompleted || 0)
+
     const updatedUser = {
-   ...user,
+     ...user,
       availableRewards: (user.availableRewards || 0) + rewardAmount,
       performedTaskIds: [...user.performedTaskIds, taskId],
-      lifetimeTasksCompleted: (user.lifetimeTasksCompleted || 0) + 1,
+      lifetimeTasksCompleted: newLifetimeTotal,
       cumulativeEarned: (user.cumulativeEarned || 0) + rewardAmount,
       monthlyEarned: {
-     ...user.monthlyEarned,
+       ...user.monthlyEarned,
         [currentMonth]: (user.monthlyEarned?.[currentMonth] || 0) + rewardAmount
-      }
+      },
+      highestLevelReached: Math.max(user.highestLevelReached || 1, newLevel)
     }
+
     setUser(updatedUser)
     localStorage.setItem('earnEasyUser', JSON.stringify(updatedUser))
+
+    if (newLevel > prevLevel && newLevel > (user.highestLevelReached || 1)) {
+      const newLevelData = getLevelData(newLevel)
+      const nextData = getLevelData(newLevel + 1)
+      setLevelPopupData({
+        level: newLevel,
+        name: newLevelData.name,
+        nextName: nextData.name,
+        nextTasks: getTasksForNextLevel(newLevel)
+      })
+      setShowLevelPopup(true)
+      setTimeout(() => setShowLevelPopup(false), 4000)
+    }
   }
 
   const toggleTheme = () => setDarkMode(!darkMode)
 
   return (
     <div className={`min-h-screen ${darkMode? 'bg-gray-950' : 'bg-gray-50'}`}>
+      <AnimatePresence>
+        {showLevelPopup && (
+          <motion.div
+            initial={{ y: -100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -100, opacity: 0 }}
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-md"
+          >
+            <div className={`${darkMode? 'bg-gray-800 border-gray-600' : 'bg-white border-gray-200'} border rounded-xl shadow-2xl p-4`}>
+              <div className="flex items-center gap-3">
+                <div className="text-3xl text-yellow-500">{React.createElement(getLevelData(levelPopupData.level).icon)}</div>
+                <div className="flex-1">
+                  <p className={`font-bold ${darkMode? 'text-gray-100' : 'text-gray-900'}`}>
+                    Level {levelPopupData.level} Achieved: {levelPopupData.name}
+                  </p>
+                  {levelPopupData.nextTasks > 0 && (
+                    <p className={`text-sm ${darkMode? 'text-gray-300' : 'text-gray-600'}`}>
+                      {levelPopupData.nextTasks} more task{levelPopupData.nextTasks > 1? 's' : ''} to {levelPopupData.nextName}
+                    </p>
+                  )}
+                  {levelPopupData.nextTasks === 0 && (
+                    <p className="text-sm text-yellow-500 font-semibold">Max Rank: Legendary Star!</p>
+                  )}
+                </div>
+                <button onClick={() => setShowLevelPopup(false)}>
+                  <FaTimes className={darkMode? 'text-gray-400' : 'text-gray-500'} />
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-md mx-auto p-4 pb-20">
         <div className="flex justify-between items-center mb-6">
-          <h1 className={`text-3xl font-bold ${darkMode? 'text-blue-400' : 'text-blue-600'}`}>
-            Earn Easy Rewards
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className={`text-3xl font-bold ${darkMode? 'text-blue-400' : 'text-blue-600'}`}>
+              Earn Easy Rewards
+            </h1>
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-full ${darkMode? 'bg-gray-800 border border-gray-600' : 'bg-white border'}`}>
+              <CurrentIcon className={currentLevel >= 18? 'text-yellow-500' : darkMode? 'text-blue-400' : 'text-blue-600'} />
+              <span className={`text-xs font-bold ${darkMode? 'text-gray-200' : 'text-gray-700'}`}>Lv.{currentLevel}</span>
+            </div>
+          </div>
           <button
             onClick={toggleTheme}
             className={`p-2 rounded-full ${darkMode? 'bg-gray-700 text-yellow-400 hover:bg-gray-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
@@ -172,7 +282,7 @@ export default function EarnEasyRewards() {
             Tasks Today: <span className="font-bold">{tasksPerformed}/{MAX_TASKS_PER_DAY}</span>
           </p>
           <p className={`text-xs ${darkMode? 'text-gray-200' : 'text-gray-500'} mt-1`}>
-            Lifetime Tasks: {user.lifetimeTasksCompleted}
+            Lifetime: {user.lifetimeTasksCompleted} | Rank: {currentLevelData.name}
           </p>
         </div>
 
