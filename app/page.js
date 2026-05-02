@@ -3,10 +3,35 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaSun, FaMoon, FaUserGraduate, FaChalkboardTeacher, FaUserCheck, FaUser, FaUserTie, FaBullhorn, FaAward, FaUsers, FaUserShield, FaUserNinja, FaMedal, FaTrophy, FaSitemap, FaChessRook, FaChessKnight, FaDraftingCompass, FaEye, FaLandmark, FaStar, FaCrown, FaTimes } from 'react-icons/fa'
 import React from 'react'
-import { getDailyTasks } from '@/lib/tasks';
 
 const TASK_COOLDOWN_HOURS = 2
 const COOLDOWN_MS = TASK_COOLDOWN_HOURS * 60 * 60 * 1000
+
+const LEVELS = [
+  { level: 1, name: 'Intern', icon: FaUserGraduate },
+  { level: 2, name: 'Trainee', icon: FaChalkboardTeacher },
+  { level: 3, name: 'Senior Trainee', icon: FaUserCheck },
+  { level: 4, name: 'Associate', icon: FaUser },
+  { level: 5, name: 'Senior Associate', icon: FaUserTie },
+  { level: 6, name: 'Ambassador', icon: FaBullhorn },
+  { level: 7, name: 'Senior Ambassador', icon: FaAward },
+  { level: 8, name: 'Manager', icon: FaUsers },
+  { level: 9, name: 'Senior Manager', icon: FaUserShield },
+  { level: 10, name: 'Trainer', icon: FaUserNinja },
+  { level: 11, name: 'Master', icon: FaMedal },
+  { level: 12, name: 'Grand Master', icon: FaTrophy },
+  { level: 13, name: 'Organiser', icon: FaSitemap },
+  { level: 14, name: 'Chief Organiser', icon: FaChessRook },
+  { level: 15, name: 'Strategist', icon: FaChessKnight },
+  { level: 16, name: 'Architect', icon: FaDraftingCompass },
+  { level: 17, name: 'Visionary', icon: FaEye },
+  { level: 18, name: 'Director', icon: FaLandmark },
+  { level: 19, name: 'Star Director', icon: FaStar },
+  { level: 20, name: 'Legendary Director', icon: FaCrown },
+  { level: 21, name: 'Legendary Star', icon: FaSun }
+]
+
+const MONTHLY_ELIGIBLE = 100000
 
 function CooldownTimer({ taskId, darkMode, getCooldownRemaining }) {
   const [remaining, setRemaining] = useState(getCooldownRemaining(taskId))
@@ -47,30 +72,6 @@ export default function EarnEasyRewards() {
   const [showLevelPopup, setShowLevelPopup] = useState(false)
   const [levelPopupData, setLevelPopupData] = useState({ level: 0, name: '', nextName: '', nextTasks: 0 })
 
-  const LEVELS = [
-    { level: 1, name: 'Intern', icon: FaUserGraduate },
-    { level: 2, name: 'Trainee', icon: FaChalkboardTeacher },
-    { level: 3, name: 'Senior Trainee', icon: FaUserCheck },
-    { level: 4, name: 'Associate', icon: FaUser },
-    { level: 5, name: 'Senior Associate', icon: FaUserTie },
-    { level: 6, name: 'Ambassador', icon: FaBullhorn },
-    { level: 7, name: 'Senior Ambassador', icon: FaAward },
-    { level: 8, name: 'Manager', icon: FaUsers },
-    { level: 9, name: 'Senior Manager', icon: FaUserShield },
-    { level: 10, name: 'Trainer', icon: FaUserNinja },
-    { level: 11, name: 'Master', icon: FaMedal },
-    { level: 12, name: 'Grand Master', icon: FaTrophy },
-    { level: 13, name: 'Organiser', icon: FaSitemap },
-    { level: 14, name: 'Chief Organiser', icon: FaChessRook },
-    { level: 15, name: 'Strategist', icon: FaChessKnight },
-    { level: 16, name: 'Architect', icon: FaDraftingCompass },
-    { level: 17, name: 'Visionary', icon: FaEye },
-    { level: 18, name: 'Director', icon: FaLandmark },
-    { level: 19, name: 'Star Director', icon: FaStar },
-    { level: 20, name: 'Legendary Director', icon: FaCrown },
-    { level: 21, name: 'Legendary Star', icon: FaSun }
-  ]
-
   const getLevel = (tasksCompleted) => {
     const level = Math.min(Math.floor(tasksCompleted) + 1, 21)
     return level
@@ -97,80 +98,75 @@ export default function EarnEasyRewards() {
     return Math.max(0, COOLDOWN_MS - elapsed)
   }
 
-  useEffect(() => {
-  setMounted(true)
-  const savedUser = localStorage.getItem('earnEasyUser')
-  const savedTheme = localStorage.getItem('earnEasyTheme')
+    useEffect(() => {
+    setMounted(true)
+    const savedUser = localStorage.getItem('earnEasyUser')
+    const savedTheme = localStorage.getItem('earnEasyTheme')
 
-  if (savedUser) {
-    const parsed = JSON.parse(savedUser)
-    if (parsed.performedTaskIds &&!parsed.taskCompletionTimes) {
-      const migrated = {}
-      const yesterday = new Date(Date.now() - COOLDOWN_MS).toISOString()
-      parsed.performedTaskIds.forEach(id => { migrated[id] = yesterday })
-      parsed.taskCompletionTimes = migrated
-      delete parsed.performedTaskIds
-    }
+    if (savedUser) {
+      const parsed = JSON.parse(savedUser)
+      if (parsed.performedTaskIds &&!parsed.taskCompletionTimes) {
+        const migrated = {}
+        const yesterday = new Date(Date.now() - COOLDOWN_MS).toISOString()
+        parsed.performedTaskIds.forEach(id => { migrated[id] = yesterday })
+        parsed.taskCompletionTimes = migrated
+        delete parsed.performedTaskIds
+      }
 
-    // Check for level up on page load
-    const currentLevel = getLevel(parsed.lifetimeTasksCompleted || 0)
-    const oldHighest = parsed.highestLevelReached || 1
+      const currentLevel = getLevel(parsed.lifetimeTasksCompleted || 0)
+      const oldHighest = parsed.highestLevelReached || 1
 
-    if (currentLevel > oldHighest) {
-      const newLevelData = getLevelData(currentLevel)
-      const nextLevelData = getLevelData(currentLevel + 1)
-      setLevelPopupData({
-        level: currentLevel,
-        name: newLevelData.name,
-        nextName: nextLevelData.name,
-        nextTasks: getTasksForNextLevel(currentLevel)
+      if (currentLevel > oldHighest) {
+        const newLevelData = getLevelData(currentLevel)
+        const nextLevelData = getLevelData(currentLevel + 1)
+        setLevelPopupData({
+          level: currentLevel,
+          name: newLevelData.name,
+          nextName: nextLevelData.name,
+          nextTasks: getTasksForNextLevel(currentLevel)
+        })
+        setShowLevelPopup(true)
+        setTimeout(() => setShowLevelPopup(false), 3000)
+
+        parsed.highestLevelReached = currentLevel
+        localStorage.setItem('earnEasyUser', JSON.stringify(parsed))
+      }
+
+      setUser({
+  ...parsed,
+        taskCompletionTimes: parsed.taskCompletionTimes || {},
+        lifetimeTasksCompleted: parsed.lifetimeTasksCompleted || 0,
+        highestLevelReached: parsed.highestLevelReached || 1
       })
-      setShowLevelPopup(true)
-      setTimeout(() => setShowLevelPopup(false), 3000)
-
-      parsed.highestLevelReached = currentLevel
-      localStorage.setItem('earnEasyUser', JSON.stringify(parsed))
+    } else {
+      const today = new Date().toDateString()
+      const newUser = {
+        availableRewards: 0,
+        taskCompletionTimes: {},
+        lastActiveDate: today,
+        joinDate: today,
+        monthlyEarned: {},
+        cumulativeEarned: 0,
+        lifetimeTasksCompleted: 0,
+        highestLevelReached: 1
+      }
+      setUser(newUser)
+      localStorage.setItem('earnEasyUser', JSON.stringify(newUser))
     }
 
-    setUser({
- ...parsed,
-      taskCompletionTimes: parsed.taskCompletionTimes || {},
-      lifetimeTasksCompleted: parsed.lifetimeTasksCompleted || 0,
-      highestLevelReached: parsed.highestLevelReached || 1
-    })
-  } else {
-    const today = new Date().toDateString()
-    const newUser = {
-      availableRewards: 0,
-      taskCompletionTimes: {},
-      lastActiveDate: today,
-      joinDate: today,
-      monthlyEarned: {},
-      cumulativeEarned: 0,
-      lifetimeTasksCompleted: 0,
-      highestLevelReached: 1
-    }
-    setUser(newUser)
-    localStorage.setItem('earnEasyUser', JSON.stringify(newUser))
-  }
-
-  if (savedTheme === 'dark') setDarkMode(true)
-}, []) // <-- Make sure there's nothing after this line except a newline
+    if (savedTheme === 'dark') setDarkMode(true)
+  }, [])
 
   useEffect(() => {
     if (mounted) localStorage.setItem('earnEasyTheme', darkMode? 'dark' : 'light')
   }, [darkMode, mounted])
-
-  const tasks = getDailyTasks();
-
-  const MONTHLY_ELIGIBLE = 100000
 
   useEffect(() => {
     if (!mounted) return
     const today = new Date().toDateString()
     if (user.lastActiveDate && user.lastActiveDate!== today) {
       const resetUser = {
-    ...user,
+   ...user,
         taskCompletionTimes: {},
         lastActiveDate: today
       }
@@ -179,7 +175,30 @@ export default function EarnEasyRewards() {
     }
   }, [mounted, user])
 
-  if (!mounted) {
+  const tasks = [
+    { id: 1, name: 'Task 1 - Read Article 1', desc: '5 min read', rewards: 5 },
+    { id: 2, name: 'Task 2 - Watch Video 1', desc: '30s video', rewards: 5 },
+    { id: 3, name: 'Task 3 - Read Article 2', desc: '3 min read', rewards: 5 },
+    { id: 4, name: 'Task 4 - Watch Video 2', desc: '60s video', rewards: 5 },
+    { id: 5, name: 'Task 5 - Take Survey 1', desc: '2 min survey', rewards: 5 },
+    { id: 6, name: 'Task 6 - View Tips', desc: '5 tips', rewards: 5 },
+    { id: 7, name: 'Task 7 - Share App', desc: 'Share with friend', rewards: 5 },
+    { id: 8, name: 'Task 8 - Daily Check-in', desc: 'Login bonus', rewards: 5 },
+    { id: 9, name: 'Task 9 - Watch Video 3', desc: '45s video', rewards: 5 },
+    { id: 10, name: 'Task 10 - Read Guide', desc: '3 min read', rewards: 5 },
+    { id: 11, name: 'Task 11 - Read Article 3', desc: '4 min read', rewards: 5 },
+    { id: 12, name: 'Task 12 - Watch Video 4', desc: '90s video', rewards: 5 },
+    { id: 13, name: 'Task 13 - Complete Quiz', desc: '5 questions', rewards: 5 },
+    { id: 14, name: 'Task 14 - Rate App', desc: 'Leave review', rewards: 5 },
+    { id: 15, name: 'Task 15 - Follow Social', desc: 'Follow us', rewards: 5 },
+    { id: 16, name: 'Task 16 - Watch Video 5', desc: '2 min video', rewards: 5 },
+    { id: 17, name: 'Task 17 - Read News', desc: '3 min read', rewards: 5 },
+    { id: 18, name: 'Task 18 - Take Survey 2', desc: '3 min survey', rewards: 5 },
+    { id: 19, name: 'Task 19 - Invite Friend', desc: 'Send invite', rewards: 5 },
+    { id: 20, name: 'Task 20 - Daily Bonus', desc: 'Claim bonus', rewards: 5 }
+  ]
+
+    if (!mounted) {
     return <div className={`min-h-screen ${darkMode? 'bg-gray-950' : 'bg-gray-50'} flex items-center justify-center`}>
       <p className={darkMode? 'text-gray-200' : 'text-gray-900'}>Loading...</p>
     </div>
