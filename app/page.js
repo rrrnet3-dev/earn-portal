@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { FaSun, FaMoon, FaUserGraduate, FaChalkboardTeacher, FaUserCheck, FaUser, FaUserTie, FaBullhorn, FaAward, FaUsers, FaUserShield, FaUserNinja, FaMedal, FaTrophy, FaSitemap, FaChessRook, FaChessKnight, FaDraftingCompass, FaEye, FaLandmark, FaStar, FaCrown, FaTimes } from 'react-icons/fa'
 import React from 'react'
+import { getDailyTasks } from '@/lib/tasks';
 
 const TASK_COOLDOWN_HOURS = 2
 const COOLDOWN_MS = TASK_COOLDOWN_HOURS * 60 * 60 * 1000
@@ -160,28 +161,7 @@ export default function EarnEasyRewards() {
     if (mounted) localStorage.setItem('earnEasyTheme', darkMode? 'dark' : 'light')
   }, [darkMode, mounted])
 
-  const tasks = [
-    { id: 1, name: 'Task 1 - Read Article 1', desc: '5 min read', rewards: 5 },
-    { id: 2, name: 'Task 2 - Watch Video 1', desc: '30s video', rewards: 5 },
-    { id: 3, name: 'Task 3 - Read Article 2', desc: '3 min read', rewards: 5 },
-    { id: 4, name: 'Task 4 - Watch Video 2', desc: '60s video', rewards: 5 },
-    { id: 5, name: 'Task 5 - Take Survey 1', desc: '2 min survey', rewards: 5 },
-    { id: 6, name: 'Task 6 - View Tips', desc: '5 tips', rewards: 5 },
-    { id: 7, name: 'Task 7 - Share App', desc: 'Share with friend', rewards: 5 },
-    { id: 8, name: 'Task 8 - Daily Check-in', desc: 'Login bonus', rewards: 5 },
-    { id: 9, name: 'Task 9 - Watch Video 3', desc: '45s video', rewards: 5 },
-    { id: 10, name: 'Task 10 - Read Guide', desc: '3 min read', rewards: 5 },
-    { id: 11, name: 'Task 11 - Read Article 3', desc: '4 min read', rewards: 5 },
-    { id: 12, name: 'Task 12 - Watch Video 4', desc: '90s video', rewards: 5 },
-    { id: 13, name: 'Task 13 - Complete Quiz', desc: '5 questions', rewards: 5 },
-    { id: 14, name: 'Task 14 - Rate App', desc: 'Leave review', rewards: 5 },
-    { id: 15, name: 'Task 15 - Follow Social', desc: 'Follow us', rewards: 5 },
-    { id: 16, name: 'Task 16 - Watch Video 5', desc: '2 min video', rewards: 5 },
-    { id: 17, name: 'Task 17 - Read News', desc: '3 min read', rewards: 5 },
-    { id: 18, name: 'Task 18 - Take Survey 2', desc: '3 min survey', rewards: 5 },
-    { id: 19, name: 'Task 19 - Invite Friend', desc: 'Send invite', rewards: 5 },
-    { id: 20, name: 'Task 20 - Daily Bonus', desc: 'Claim bonus', rewards: 5 }
-  ]
+  const tasks = getDailyTasks();
 
   const MONTHLY_ELIGIBLE = 100000
 
